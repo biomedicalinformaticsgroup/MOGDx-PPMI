@@ -8,26 +8,34 @@ from sklearn.metrics import precision_recall_curve , average_precision_score , r
 from itertools import cycle
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import networkx as nx
 
 
-def train(g, h , subjects_list , split , device ,  model , labels , targets , epochs , lr):
+def train(g, h , subjects_list , train_split , val_split , device ,  model , labels , targets , epochs , lr , patience):
     # loss function, optimizer and scheduler
     #loss_fcn = nn.BCEWithLogitsLoss()
     loss_fcn = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr , weight_decay=1e-4)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
 
-    train , val = train_test_split(
-        targets.loc[split].index, train_size=0.8, test_size=None, stratify=targets.loc[split]
-        )
+    best_val_loss = float('inf')
+    consecutive_epochs_without_improvement = 0
     
     # training loop
+    train_acc = 0
     for epoch in range(epochs):
         model.train()
 
         logits  = model(g , h , subjects_list , device)
-        
-        loss = loss_fcn(logits[train], labels[train].float())
+
+        loss = loss_fcn(logits[train_split], labels[train_split].float())
+
+        _, predicted = torch.max(logits[train_split], 1)
+
+        _, true = torch.max(labels[train_split] , 1)
+
+        train_acc = (predicted == true).float().mean().item()
         
         optimizer.zero_grad()
         loss.backward()
@@ -36,32 +44,46 @@ def train(g, h , subjects_list , split , device ,  model , labels , targets , ep
         scheduler.step()
         
         if (epoch % 5) == 0 : 
-            train_acc , train_f1 , train_PRC , train_SNS = evaluate(train, device, g , h , subjects_list , model , labels )
-            valid_acc , valid_f1 , valid_PRC , valid_SNS = evaluate(val, device, g , h , subjects_list , model , labels)
+            valid_loss , valid_acc , valid_f1 , valid_PRC , valid_SNS = evaluate(val_split, device, g , h , subjects_list , model , labels)
             print(
                 "Epoch {:05d} | Loss {:.4f} | Train Acc. {:.4f} | Validation Acc. {:.4f} ".format(
                     epoch, loss.item() , train_acc, valid_acc
                 )
             )
 
+            # Check for early stopping
+            if valid_loss < best_val_loss:
+                best_val_loss = valid_loss
+                consecutive_epochs_without_improvement = 0
+            else:
+                consecutive_epochs_without_improvement += 1
+
+            if consecutive_epochs_without_improvement >= patience:
+                print(f"Early stopping! No improvement for {patience} consecutive epochs.")
+                break
+
 def evaluate(idx, device, g , h , subjects_list , model , labels):
     model.eval()
+    loss_fcn = nn.CrossEntropyLoss()
     acc = 0
     
-    logits = model(g , h , subjects_list , device)
+    with torch.no_grad() : 
+        logits = model(g , h , subjects_list , device)
+
+        loss = loss_fcn(logits[idx], labels[idx].float())
+
+        acc += (logits[idx].argmax(1) == labels[idx].argmax(1)).float().mean().item()
+        
+        logits_out = logits[idx].cpu().detach().numpy()
+        binary_out = (logits_out == logits_out.max(1).reshape(-1,1))*1
+        
+        labels_out = labels[idx].cpu().detach().numpy()
+        
+        PRC =  average_precision_score(binary_out, labels_out , average="weighted")
+        SNS = recall_score(binary_out, labels_out , average="weighted")
+        F1 = 2*((PRC*SNS)/(PRC+SNS))
     
-    acc += (logits[idx].argmax(1) == labels[idx].argmax(1)).float().mean().item()
-    
-    logits_out = logits[idx].cpu().detach().numpy()
-    binary_out = (logits_out == logits_out.max(1).reshape(-1,1))*1
-    
-    labels_out = labels[idx].cpu().detach().numpy()
-    
-    PRC =  average_precision_score(binary_out, labels_out , average="weighted")
-    SNS = recall_score(binary_out, labels_out , average="weighted")
-    F1 = 2*((PRC*SNS)/(PRC+SNS))
-    
-    return acc , F1 , PRC , SNS
+    return loss , acc , F1 , PRC , SNS
 
             
 def confusion_matrix(g , h , subjects_list , device , model , targets , mlb) : 
@@ -87,7 +109,7 @@ def AUROC(g , h , subjects_list , device , model , targets , mlb) :
     n_classes = len(targets.unique())
     y_score = mlb.transform(targets.values.reshape(-1,1))
 
-    Y_test = logits.cpu().detach().numpy()
+    Y_test = nn.functional.softmax(logits , dim = 1).cpu().detach().numpy()
 
     # For each class
     precision = dict()

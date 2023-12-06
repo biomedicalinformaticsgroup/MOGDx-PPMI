@@ -68,7 +68,7 @@ class GCN_MMAE(nn.Module):
         # list of hidden representation at each layer (including the input layer)
         
         reduced_dims = []
-        ordered_nodes = pd.Series(nx.get_node_attributes(g , 'idx')).astype(int)
+        ordered_nodes = pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)
         node_features = 0
         for i , ae in enumerate(self.ae_dims) : 
             

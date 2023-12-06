@@ -14,9 +14,11 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MultiLabelBinarizer
 import networkx as nx
 import torch
+from torch.nn.parallel import DataParallel
 from datetime import datetime
 import joblib
 import warnings
+import gc
 warnings.filterwarnings("ignore")
 
 mlb = MultiLabelBinarizer()
@@ -30,6 +32,7 @@ def main(args):
         
     device = torch.device('cpu' if args.no_cuda else 'cuda') # Get GPU device name, else use CPU
     print("Using %s device" % device)
+    get_gpu_memory()
 
     datModalities , meta = data_parsing(args.input , args.snf_net , args.target , args.index_col)
 
@@ -46,24 +49,29 @@ def main(args):
     node_subjects = meta.loc[pd.Series(nx.get_node_attributes(g , 'idx'))].reset_index(drop=True)
     node_subjects.name = args.target
 
-    subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(int)) & set(datModalities[mod].index)) for mod in datModalities]
+    subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities]
     h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ]
-
-    labels = torch.from_numpy(np.array(mlb.fit_transform(node_subjects.values.reshape(-1,1)) , dtype = np.float32)).to(device)
     
-    output_metrics         = []
+    labels = torch.from_numpy(np.array(mlb.fit_transform(node_subjects.values.reshape(-1,1)) , dtype = np.float32)).to(device)
+
+    output_metrics = []
     for i, (train_index, test_index) in enumerate(skf.split(node_subjects.index, node_subjects)) :
 
-        model = GCN_MMAE([ datModalities[mod].shape[1] for mod in datModalities] , args.latent_dim , 64  , len(node_subjects.unique())).to(device)
+        model = GCN_MMAE([ datModalities[mod].shape[1] for mod in datModalities] , args.latent_dim , args.h_feats  , len(node_subjects.unique())).to(device)
         print(model)
         print(g)
-        train(g, h , subjects_list , train_index , device ,  model , labels , node_subjects , args.epochs , args.lr)
+
+        test_index , val_index = train_test_split(
+            test_index, train_size=0.5, test_size=None, stratify=node_subjects.loc[test_index]
+            )
+
+        train(g, h , subjects_list , train_index , val_index , device ,  model , labels , node_subjects , args.epochs , args.lr , args.patience)
 
         test_output_metrics = evaluate(test_index , device , g , h , subjects_list , model , labels )
 
         print(
             "Fold : {:01d} | Test Accuracy = {:.4f} | F1 = {:.4f} ".format(
-            i+1 , test_output_metrics[0] , test_output_metrics[1] )
+            i+1 , test_output_metrics[1] , test_output_metrics[2] )
         )
         
         output_metrics.append(test_output_metrics)
@@ -73,6 +81,13 @@ def main(args):
         elif output_metrics[best_idx][1] < test_output_metrics[1] : 
             best_model = model
             best_idx   = i
+
+        get_gpu_memory()
+        del model
+        gc.collect()
+        torch.cuda.empty_cache()
+        print('Clearing gpu memory')
+        get_gpu_memory()
             
                         
     accuracy = []
@@ -84,10 +99,10 @@ def main(args):
             i += 1
             f.write("Fold %i \n" % i)
             f.write(f"acc = %2.3f , avg_prc = %2.3f , avg_recall = %2.3f , avg_f1 = %2.3f" % 
-                    (metric[0] , metric[1] , metric[2] , metric[3]))
+                    (metric[1] , metric[3] , metric[4] , metric[2]))
             f.write('\n')
-            accuracy.append(metric[0])
-            F1.append(metric[1])
+            accuracy.append(metric[1])
+            F1.append(metric[2])
             
         f.write('-------------------------\n')
         f.write("%i Fold Cross Validation Accuracy = %2.2f \u00B1 %2.2f \n" %(args.n_splits , np.mean(accuracy)*100 , np.std(accuracy)*100))
@@ -102,7 +117,7 @@ def main(args):
     current_date = datetime.now()
 
     # Extract month and day as string names
-    month = current_date.strftime('%B')  # Full month name
+    month = current_date.strftime('%B')[:3]  # Full month name
     day = current_date.day
     
     save_path = args.output + '/Models/'
@@ -139,6 +154,8 @@ def construct_parser():
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 1.0)')
+    parser.add_argument('--patience', type=float, default=25,
+                        help='Early Stopping Patience (default: 25 batches of 5 -> equivalent of 25*5 = 125)')
     #parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
     #                    help='Learning rate step gamma (default: 0.7)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -165,6 +182,8 @@ def construct_parser():
                         'Leave blank if none.')
     parser.add_argument('--n-splits' , default=10 , type=int, help='Number of K-Fold'
                         'splits to use')
+    parser.add_argument('--h-feats' , default=64 , type=int , help ='Integer specifying hidden dim of GNN'
+                        'specifying GNN layer size')
     #parser.add_argument('--layers' , default=[64 , 64], nargs="+" , type=int , help ='List of integrs'
     #                    'specifying GNN layer sizes')
     #parser.add_argument('--layer-activation', default=['elu' , 'elu'] , nargs="+" , type=str , help='List of activation'
