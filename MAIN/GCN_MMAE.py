@@ -37,7 +37,7 @@ class AE(torch.nn.Module):
         return encoded , decoded 
     
 class GCN_MMAE(nn.Module):
-    def __init__(self, input_dims, latent_dims , hidden_feats , num_classes):
+    def __init__(self, input_dims, latent_dims , decoder_dim , hidden_feats , num_classes):
         
         super().__init__()
         
@@ -49,12 +49,12 @@ class GCN_MMAE(nn.Module):
         # GCN with AE reduced dim input and pooling scheme
         
         for modality in range(len(input_dims)):  # excluding the input layer
-            self.ae_dims.append(AE(input_dims[modality] , latent_dims[modality] , 64))
+            self.ae_dims.append(AE(input_dims[modality] , latent_dims[modality] , decoder_dim))
         
         for layers in range(num_layers) :
             if layers == 0 :
                 self.gcnlayers.append(
-                    GraphConv(64 , hidden_feats)
+                    GraphConv(decoder_dim , hidden_feats)
                 )  
                 self.batch_norms.append(nn.BatchNorm1d(hidden_feats))
             else : 

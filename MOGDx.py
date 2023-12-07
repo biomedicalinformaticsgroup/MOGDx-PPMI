@@ -57,7 +57,7 @@ def main(args):
     output_metrics = []
     for i, (train_index, test_index) in enumerate(skf.split(node_subjects.index, node_subjects)) :
 
-        model = GCN_MMAE([ datModalities[mod].shape[1] for mod in datModalities] , args.latent_dim , args.h_feats  , len(node_subjects.unique())).to(device)
+        model = GCN_MMAE([ datModalities[mod].shape[1] for mod in datModalities] , args.latent_dim , args.decoder_dim , args.h_feats  , len(node_subjects.unique())).to(device)
         print(model)
         print(g)
 
@@ -154,8 +154,8 @@ def construct_parser():
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 1.0)')
-    parser.add_argument('--patience', type=float, default=25,
-                        help='Early Stopping Patience (default: 25 batches of 5 -> equivalent of 25*5 = 125)')
+    parser.add_argument('--patience', type=float, default=50,
+                        help='Early Stopping Patience (default: 50 batches of 5 -> equivalent of 50*5 = 250)')
     #parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
     #                    help='Learning rate step gamma (default: 0.7)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -184,6 +184,8 @@ def construct_parser():
                         'splits to use')
     parser.add_argument('--h-feats' , default=64 , type=int , help ='Integer specifying hidden dim of GNN'
                         'specifying GNN layer size')
+    parser.add_argument('--decoder-dim' , default=64 , type=int , help ='Integer specifying dim of common '
+                        'layer to all modalities')
     #parser.add_argument('--layers' , default=[64 , 64], nargs="+" , type=int , help ='List of integrs'
     #                    'specifying GNN layer sizes')
     #parser.add_argument('--layer-activation', default=['elu' , 'elu'] , nargs="+" , type=str , help='List of activation'
