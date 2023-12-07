@@ -22,6 +22,9 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
     best_val_loss = float('inf')
     consecutive_epochs_without_improvement = 0
     
+    train_loss = []
+    val_loss   = []
+
     # training loop
     train_acc = 0
     for epoch in range(epochs):
@@ -36,7 +39,8 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
         _, true = torch.max(labels[train_split] , 1)
 
         train_acc = (predicted == true).float().mean().item()
-        
+        train_loss.append(loss.item)
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -61,6 +65,8 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
             if consecutive_epochs_without_improvement >= patience:
                 print(f"Early stopping! No improvement for {patience} consecutive epochs.")
                 break
+
+            val_loss.append(valid_loss.item())
 
 def evaluate(idx, device, g , h , subjects_list , model , labels):
     model.eval()

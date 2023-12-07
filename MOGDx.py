@@ -65,7 +65,8 @@ def main(args):
             test_index, train_size=0.5, test_size=None, stratify=node_subjects.loc[test_index]
             )
 
-        train(g, h , subjects_list , train_index , val_index , device ,  model , labels , node_subjects , args.epochs , args.lr , args.patience)
+        loss_fig = train(g, h , subjects_list , train_index , val_index , device ,  model , labels , node_subjects , args.epochs , args.lr , args.patience)
+        loss_fig.savefig(f'{args.output}/loss_plots/loss_split_{i}.png' , dpi = 200)
 
         test_output_metrics = evaluate(test_index , device , g , h , subjects_list , model , labels )
 
@@ -154,8 +155,8 @@ def construct_parser():
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 1.0)')
-    parser.add_argument('--patience', type=float, default=50,
-                        help='Early Stopping Patience (default: 50 batches of 5 -> equivalent of 50*5 = 250)')
+    parser.add_argument('--patience', type=float, default=100,
+                        help='Early Stopping Patience (default: 100 batches of 5 -> equivalent of 100*5 = 500)')
     #parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
     #                    help='Learning rate step gamma (default: 0.7)')
     parser.add_argument('--no-cuda', action='store_true', default=False,

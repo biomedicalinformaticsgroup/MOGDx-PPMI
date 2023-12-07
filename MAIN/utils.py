@@ -5,7 +5,7 @@ import os
 
 def data_parsing(DATA_PATH , GRAPH_FILE ,TARGET , INDEX_COL) :
     
-    META_DATA_PATH = [f'{DATA_PATH}/datMeta_{mod}.csv' for mod in GRAPH_FILE[:-4].split('_')[1:-1]]
+    META_DATA_PATH = [f'{DATA_PATH}/datMeta_{mod}.csv' for mod in GRAPH_FILE[:-4].split('_')[:-1]]
 
     meta = pd.Series(dtype=str)
     for path in META_DATA_PATH : 
@@ -21,7 +21,7 @@ def data_parsing(DATA_PATH , GRAPH_FILE ,TARGET , INDEX_COL) :
     meta = meta[~meta.index.duplicated(keep='first')] # Remove duplicated entries
     meta.index = [str(i) for i in meta.index] # Ensures the patient ids are strings
 
-    TRAIN_DATA_PATH = [f'{DATA_PATH}/datExpr_{mod}.csv' for mod in GRAPH_FILE[:-4].split('_')[1:-1]] # Looks for all expr file names
+    TRAIN_DATA_PATH = [f'{DATA_PATH}/datExpr_{mod}.csv' for mod in GRAPH_FILE[:-4].split('_')[:-1]] # Looks for all expr file names
     datModalities = {}
     for path in TRAIN_DATA_PATH : 
         print('Importing \t %s \n' % path)
