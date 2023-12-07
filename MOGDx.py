@@ -65,8 +65,11 @@ def main(args):
             test_index, train_size=0.5, test_size=None, stratify=node_subjects.loc[test_index]
             )
 
-        loss_fig = train(g, h , subjects_list , train_index , val_index , device ,  model , labels , node_subjects , args.epochs , args.lr , args.patience)
-        loss_fig.savefig(f'{args.output}/loss_plots/loss_split_{i}.png' , dpi = 200)
+        loss_plot = train(g, h , subjects_list , train_index , val_index , device ,  model , labels , node_subjects , args.epochs , args.lr , args.patience)
+        plt.title(f'Loss for split {i}')
+        save_path = args.output + '/loss_plots/'
+        os.makedirs(save_path, exist_ok=True)
+        plt.savefig(f'{save_path}loss_split_{i}.png' , dpi = 200)
 
         test_output_metrics = evaluate(test_index , device , g , h , subjects_list , model , labels )
 

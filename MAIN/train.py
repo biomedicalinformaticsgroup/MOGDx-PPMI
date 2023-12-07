@@ -39,7 +39,7 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
         _, true = torch.max(labels[train_split] , 1)
 
         train_acc = (predicted == true).float().mean().item()
-        train_loss.append(loss.item)
+        train_loss.append(loss.item())
 
         optimizer.zero_grad()
         loss.backward()
@@ -67,6 +67,14 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
                 break
 
             val_loss.append(valid_loss.item())
+
+    fig , ax = plt.subplots(figsize=(6,4))
+    ax.plot(train_loss  , label = 'Train Loss')
+    ax.plot(range(5 , len(train_loss)+1 , 5) , val_loss  , label = 'Validation Loss')
+    plt.ylim(0,5)
+    ax.legend()
+
+    return fig
 
 def evaluate(idx, device, g , h , subjects_list , model , labels):
     model.eval()
