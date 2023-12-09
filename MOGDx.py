@@ -51,13 +51,17 @@ def main(args):
 
     subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities]
     h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ]
+    GCN_MMAE_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities]
     
+    del datModalities
+    gc.collect()
+
     labels = torch.from_numpy(np.array(mlb.fit_transform(node_subjects.values.reshape(-1,1)) , dtype = np.float32)).to(device)
 
     output_metrics = []
     for i, (train_index, test_index) in enumerate(skf.split(node_subjects.index, node_subjects)) :
 
-        model = GCN_MMAE([ datModalities[mod].shape[1] for mod in datModalities] , args.latent_dim , args.decoder_dim , args.h_feats  , len(node_subjects.unique())).to(device)
+        model = GCN_MMAE(GCN_MMAE_input_shapes , args.latent_dim , args.decoder_dim , args.h_feats  , len(node_subjects.unique())).to(device)
         print(model)
         print(g)
 
@@ -70,6 +74,7 @@ def main(args):
         save_path = args.output + '/loss_plots/'
         os.makedirs(save_path, exist_ok=True)
         plt.savefig(f'{save_path}loss_split_{i}.png' , dpi = 200)
+        plt.clf()
 
         test_output_metrics = evaluate(test_index , device , g , h , subjects_list , model , labels )
 
