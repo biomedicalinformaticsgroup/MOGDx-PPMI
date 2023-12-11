@@ -21,6 +21,9 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
 
     best_val_loss = float('inf')
     consecutive_epochs_without_improvement = 0
+
+    train_loss = []
+    val_loss   = []
     
     # training loop
     train_acc = 0
@@ -36,6 +39,7 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
         _, true = torch.max(labels[train_split] , 1)
 
         train_acc = (predicted == true).float().mean().item()
+        train_loss.append(loss.item())
         
         optimizer.zero_grad()
         loss.backward()
@@ -51,16 +55,27 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
                 )
             )
 
-            # Check for early stopping
-            if valid_loss < best_val_loss:
-                best_val_loss = valid_loss
-                consecutive_epochs_without_improvement = 0
-            else:
-                consecutive_epochs_without_improvement += 1
+            # Check for early stopping with waiting
+            if epoch > 200 : 
+                if valid_loss < best_val_loss:
+                    best_val_loss = valid_loss
+                    consecutive_epochs_without_improvement = 0
+                else:
+                    consecutive_epochs_without_improvement += 1
 
-            if consecutive_epochs_without_improvement >= patience:
-                print(f"Early stopping! No improvement for {patience} consecutive epochs.")
-                break
+                if consecutive_epochs_without_improvement >= patience:
+                    print(f"Early stopping! No improvement for {patience} consecutive epochs.")
+                    break
+
+            val_loss.append(valid_loss.item())
+
+    fig , ax = plt.subplots(figsize=(6,4))
+    ax.plot(train_loss  , label = 'Train Loss')
+    ax.plot(range(5 , len(train_loss)+1 , 5) , val_loss  , label = 'Validation Loss')
+    plt.ylim(0,5)
+    ax.legend()
+
+    return fig
 
 def evaluate(idx, device, g , h , subjects_list , model , labels):
     model.eval()
