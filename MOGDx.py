@@ -50,8 +50,12 @@ def main(args):
     node_subjects.name = args.target
 
     subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities]
-    h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ]
-    GCN_MMAE_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities]
+    if args.psn_only : 
+        h = [torch.from_numpy(np.eye(len(node_subjects))).to(device)]
+        GCN_MMAE_input_shapes = [len(node_subjects)]
+    else :
+        h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ]
+        GCN_MMAE_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities]
     
     del datModalities
     gc.collect()
@@ -195,10 +199,6 @@ def construct_parser():
                         'specifying GNN layer size')
     parser.add_argument('--decoder-dim' , default=64 , type=int , help ='Integer specifying dim of common '
                         'layer to all modalities')
-    #parser.add_argument('--layers' , default=[64 , 64], nargs="+" , type=int , help ='List of integrs'
-    #                    'specifying GNN layer sizes')
-    #parser.add_argument('--layer-activation', default=['elu' , 'elu'] , nargs="+" , type=str , help='List of activation'
-    #                    'functions for each GNN layer')
 
     parser.add_argument('-i', '--input', required=True, help='Path to the '
                         'input data for the model to read')

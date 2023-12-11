@@ -21,10 +21,10 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
 
     best_val_loss = float('inf')
     consecutive_epochs_without_improvement = 0
-    
+
     train_loss = []
     val_loss   = []
-
+    
     # training loop
     train_acc = 0
     for epoch in range(epochs):
@@ -40,7 +40,7 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
 
         train_acc = (predicted == true).float().mean().item()
         train_loss.append(loss.item())
-
+        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -55,16 +55,17 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
                 )
             )
 
-            # Check for early stopping
-            if valid_loss < best_val_loss:
-                best_val_loss = valid_loss
-                consecutive_epochs_without_improvement = 0
-            else:
-                consecutive_epochs_without_improvement += 1
+            # Check for early stopping with waiting
+            if epoch > 200 : 
+                if valid_loss < best_val_loss:
+                    best_val_loss = valid_loss
+                    consecutive_epochs_without_improvement = 0
+                else:
+                    consecutive_epochs_without_improvement += 1
 
-            if consecutive_epochs_without_improvement >= patience:
-                print(f"Early stopping! No improvement for {patience} consecutive epochs.")
-                break
+                if consecutive_epochs_without_improvement >= patience:
+                    print(f"Early stopping! No improvement for {patience} consecutive epochs.")
+                    break
 
             val_loss.append(valid_loss.item())
 
