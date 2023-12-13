@@ -49,13 +49,16 @@ def main(args):
     node_subjects = meta.loc[pd.Series(nx.get_node_attributes(g , 'idx'))].reset_index(drop=True)
     node_subjects.name = args.target
 
-    subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities]
     if args.psn_only : 
-        h = [torch.from_numpy(np.eye(len(node_subjects))).to(device)]
+        subjects_list = [list(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str))]
+        h = [torch.from_numpy(np.eye(len(node_subjects), dtype = np.float32)).to(device)]
         GCN_MMAE_input_shapes = [len(node_subjects)]
+        print(h)
     else :
+        subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities]
         h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ]
         GCN_MMAE_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities]
+        print(h)
     
     del datModalities
     gc.collect()
