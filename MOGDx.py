@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, './MAIN/')
 import Network
 from utils import *
-from GCN_MMAE import GCN_MMAE
+from GCN_MME import GCN_MME
 from train import *
 
 import matplotlib.pyplot as plt
@@ -50,7 +50,7 @@ def main(args):
 
     subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities] # Get list of subjects in each modality
     h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ] # Get torch tensor of data for each modality
-    GCN_MMAE_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities] # Get input shape for each modality
+    GCN_MME_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities] # Get input shape for each modality
     
     del datModalities
     gc.collect()
@@ -62,7 +62,7 @@ def main(args):
     labels_all = np.array([])
     for i, (train_index, test_index) in enumerate(skf.split(node_subjects.index, node_subjects)) :
 
-        model = GCN_MMAE(GCN_MMAE_input_shapes , args.latent_dim , args.decoder_dim , args.h_feats  , len(node_subjects.unique())).to(device) 
+        model = GCN_MME(GCN_MME_input_shapes , args.latent_dim , args.decoder_dim , args.h_feats  , len(node_subjects.unique())).to(device) 
         print(model)
         print(g)
 
@@ -141,7 +141,7 @@ def main(args):
     torch.save({
         'model_state_dict': best_model.state_dict(),
         # You can add more information to save, such as training history, hyperparameters, etc.
-    }, f'{save_path}GCN_MMAE_model_{month}{day}' )
+    }, f'{save_path}GCN_MME_model_{month}{day}' )
     
     # Create output plots and save all the training predictions to file
     if args.no_output_plots : 
