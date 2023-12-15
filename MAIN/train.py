@@ -43,6 +43,7 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
         scheduler.step()
         
         if (epoch % 5) == 0 : 
+
             _, predicted = torch.max(logits[train_split], 1)
             _, true = torch.max(labels[train_split] , 1)
             train_acc = (predicted == true).float().mean().item()
@@ -76,7 +77,7 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
 
     return fig
 
-def evaluate(idx, device, g , h , subjects_list , model , labels):
+def evaluate(idx, device, g , h , subjects_list , model , labels): 
     model.eval()
     loss_fcn = nn.CrossEntropyLoss()
     acc = 0
@@ -100,7 +101,7 @@ def evaluate(idx, device, g , h , subjects_list , model , labels):
     return loss , acc , F1 , PRC , SNS , logits_out , labels_out
 
             
-def confusion_matrix(true , predicted , mlb) :  
+def confusion_matrix(true , predicted , mlb) : 
     
     cm = sk.metrics.confusion_matrix(true.argmax(1), predicted.argmax(1))
 
