@@ -109,7 +109,7 @@ def confusion_matrix(true , predicted , mlb) :
     
     return cmat
 
-def AUROC(y_score , logits , mlb) :  : 
+def AUROC(y_score , logits , mlb) :  
 
     Y_test = np.exp(logits)/sum(np.exp(logits))
     targets = mlb.inverse_transform(y_score)
@@ -167,4 +167,4 @@ def AUROC(y_score , logits , mlb) :  :
     ax.legend(handles=handles, labels=plt_labels, loc="lower left")
     ax.set_title("Multi-class Precision-Recall curve")
     
-    return fig , Y_test
+    return fig 
