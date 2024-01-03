@@ -12,7 +12,7 @@ import pandas as pd
 import networkx as nx
 
 
-def train(g, h , subjects_list , train_split , val_split , device ,  model , labels , targets , epochs , lr , patience):
+def train(g, h , subjects_list , train_split , val_split , device ,  model , labels , epochs , lr , patience):
     # loss function, optimizer and scheduler
     #loss_fcn = nn.BCEWithLogitsLoss()
     loss_fcn = nn.CrossEntropyLoss()
@@ -111,7 +111,7 @@ def confusion_matrix(true , predicted , mlb) :
 
 def AUROC(y_score , logits , mlb) : 
 
-    Y_test = np.exp(logits)/sum(np.exp(logits))
+    Y_test = np.exp(logits)/np.sum(np.exp(logits) , axis = 1).reshape(-1,1)
     targets = mlb.inverse_transform(y_score)
 
     # For each class

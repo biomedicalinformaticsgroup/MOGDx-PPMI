@@ -48,9 +48,14 @@ def main(args):
     node_subjects = meta.loc[pd.Series(nx.get_node_attributes(g , 'idx'))].reset_index(drop=True) # Get node target labels from meta data
     node_subjects.name = args.target
 
-    subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities] # Get list of subjects in each modality
-    h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ] # Get torch tensor of data for each modality
-    GCN_MME_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities] # Get input shape for each modality
+    if args.psn_only : 
+        subjects_list = [list(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str))]
+        h = [torch.from_numpy(np.eye(len(node_subjects), dtype = np.float32)).to(device)]
+        GCN_MME_input_shapes = [len(node_subjects)]
+    else :
+        subjects_list = [list(set(pd.Series(nx.get_node_attributes(g , 'idx')).astype(str)) & set(datModalities[mod].index)) for mod in datModalities]
+        h = [torch.from_numpy(datModalities[mod].loc[subjects_list[i]].to_numpy(dtype=np.float32)).to(device) for i , mod in enumerate(datModalities) ]
+        GCN_MME_input_shapes = [ datModalities[mod].shape[1] for mod in datModalities]
     
     del datModalities
     gc.collect()
@@ -67,10 +72,10 @@ def main(args):
         print(g)
 
         train_index , val_index = train_test_split(
-            train_index, train_size=0.8, test_size=None, stratify=node_subjects.loc[train_index]
+            train_index, train_size=0.85, test_size=None, stratify=node_subjects.loc[train_index]
             )
 
-        loss_plot = train(g, h , subjects_list , train_index , val_index , device ,  model , labels , node_subjects , args.epochs , args.lr , args.patience)
+        loss_plot = train(g, h , subjects_list , train_index , val_index , device ,  model , labels , args.epochs , args.lr , args.patience)
         plt.title(f'Loss for split {i}')
         save_path = args.output + '/loss_plots/'
         os.makedirs(save_path, exist_ok=True)
@@ -156,7 +161,6 @@ def main(args):
         
         all_predictions = (logits == logits.max(1).reshape(-1,1))*1
         node_predictions = mlb.inverse_transform(all_predictions)
-        print(node_predictions)
         node_predictions = [i[0] for i in node_predictions]
 
         pd.DataFrame({'Actual' : meta.loc[pd.Series(nx.get_node_attributes(g , 'idx'))] , 'Predicted' : node_predictions}).to_csv(args.output + '/Predictions.csv')
@@ -195,10 +199,6 @@ def construct_parser():
                         'specifying GNN layer size')
     parser.add_argument('--decoder-dim' , default=64 , type=int , help ='Integer specifying dim of common '
                         'layer to all modalities')
-    #parser.add_argument('--layers' , default=[64 , 64], nargs="+" , type=int , help ='List of integrs'
-    #                    'specifying GNN layer sizes')
-    #parser.add_argument('--layer-activation', default=['elu' , 'elu'] , nargs="+" , type=str , help='List of activation'
-    #                    'functions for each GNN layer')
 
     parser.add_argument('-i', '--input', required=True, help='Path to the '
                         'input data for the model to read')

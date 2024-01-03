@@ -86,6 +86,8 @@ class GCN_MME(nn.Module):
             
         g = dgl.from_networkx(g).to(device)
         g.ndata['feat'] = node_features
+        if g.in_degrees().sum() == 0 :
+            g = dgl.add_self_loop(g)
         
         h = node_features
 
