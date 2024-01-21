@@ -33,6 +33,7 @@ Save each modalities processed folder with naming convention `modality_processed
 PPMI : \
 project = 'All' \
 dataset = 'PPMI' \
+TimeStep = 'V08' \
 trait = 'CONCOHORT_DEFINITION' 
 
 ### Step 3 - Graph Generation
