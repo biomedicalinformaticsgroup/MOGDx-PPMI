@@ -11,7 +11,7 @@ TimeStep <- 'V06'
 index_col <- 'PATNO'
 
 # The list of modalities
-modalities <- c( 'mRNA' , 'miRNA' , 'DNAm' , 'CNV' , 'RPPA' )
+modalities <- c( 'mRNA' , 'miRNA' , 'DNAm' , 'SNP' , 'Clinical' )
 
 # Initialize an empty list to store sublists
 mod_list <- list()
@@ -28,9 +28,6 @@ for (comb_length in 2:length(modalities)) {
     mod_list[[i]] <- sublist
   }
 }
-
-mod_list <- c()
-mod_list[[1]] <- c('mRNA' , 'SNP'  ,'DNAm')
 
 for (sub_mod_list in mod_list) {
   colnames <- c('PATNO' ,  'race' , 'GENDER' , 'AGE_AT_VISIT' , trait)
@@ -88,6 +85,4 @@ for (sub_mod_list in mod_list) {
   print(length(V(g)))
   write.csv(as_long_data_frame(g) , file = paste0('./data/',project,'/raw/Com_Tmpt/V08/output/',TimeStep,'/',TimeStep,'_',paste0(sub_mod_list , collapse = '_'),'_graph.csv'))
 }
-#write.csv(as_long_data_frame(g) , 
-          #file = paste0('./Network/modality_expts/',TimeStep,'/',length(mod_list),'/',paste0(mod_list , collapse = '_'),'_graph.csv'))
 
