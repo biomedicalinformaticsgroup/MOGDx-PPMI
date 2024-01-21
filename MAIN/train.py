@@ -12,7 +12,7 @@ import pandas as pd
 import networkx as nx
 
 
-def train(g, h , subjects_list , train_split , val_split , device ,  model , labels , targets , epochs , lr , patience):
+def train(g, h , subjects_list , train_split , val_split , device ,  model , labels , epochs , lr , patience):
     # loss function, optimizer and scheduler
     #loss_fcn = nn.BCEWithLogitsLoss()
     loss_fcn = nn.CrossEntropyLoss()
@@ -21,6 +21,9 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
 
     best_val_loss = float('inf')
     consecutive_epochs_without_improvement = 0
+
+    train_loss = []
+    val_loss   = []
     
     # training loop
     train_acc = 0
@@ -30,12 +33,7 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
         logits  = model(g , h , subjects_list , device)
 
         loss = loss_fcn(logits[train_split], labels[train_split].float())
-
-        _, predicted = torch.max(logits[train_split], 1)
-
-        _, true = torch.max(labels[train_split] , 1)
-
-        train_acc = (predicted == true).float().mean().item()
+        train_loss.append(loss.item())
         
         optimizer.zero_grad()
         loss.backward()
@@ -43,24 +41,40 @@ def train(g, h , subjects_list , train_split , val_split , device ,  model , lab
 
         scheduler.step()
         
-        if (epoch % 5) == 0 : 
-            valid_loss , valid_acc , valid_f1 , valid_PRC , valid_SNS = evaluate(val_split, device, g , h , subjects_list , model , labels)
+        if (epoch % 5) == 0 :
+            
+            _, predicted = torch.max(logits[train_split], 1)
+            _, true = torch.max(labels[train_split] , 1)
+            train_acc = (predicted == true).float().mean().item()
+
+            valid_loss , valid_acc , valid_f1 , valid_PRC , valid_SNS , _ , _ = evaluate(val_split, device, g , h , subjects_list , model , labels)
             print(
                 "Epoch {:05d} | Loss {:.4f} | Train Acc. {:.4f} | Validation Acc. {:.4f} ".format(
                     epoch, loss.item() , train_acc, valid_acc
                 )
             )
 
-            # Check for early stopping
-            if valid_loss < best_val_loss:
-                best_val_loss = valid_loss
-                consecutive_epochs_without_improvement = 0
-            else:
-                consecutive_epochs_without_improvement += 1
+            # Check for early stopping with waiting
+            if epoch > 200 : 
+                if valid_loss < best_val_loss:
+                    best_val_loss = valid_loss
+                    consecutive_epochs_without_improvement = 0
+                else:
+                    consecutive_epochs_without_improvement += 1
 
-            if consecutive_epochs_without_improvement >= patience:
-                print(f"Early stopping! No improvement for {patience} consecutive epochs.")
-                break
+                if consecutive_epochs_without_improvement >= patience:
+                    print(f"Early stopping! No improvement for {patience} consecutive epochs.")
+                    break
+
+            val_loss.append(valid_loss.item())
+
+    fig , ax = plt.subplots(figsize=(6,4))
+    ax.plot(train_loss  , label = 'Train Loss')
+    ax.plot(range(5 , len(train_loss)+1 , 5) , val_loss  , label = 'Validation Loss')
+    plt.ylim(0,5)
+    ax.legend()
+
+    return fig
 
 def evaluate(idx, device, g , h , subjects_list , model , labels):
     model.eval()
@@ -83,39 +97,29 @@ def evaluate(idx, device, g , h , subjects_list , model , labels):
         SNS = recall_score(binary_out, labels_out , average="weighted")
         F1 = 2*((PRC*SNS)/(PRC+SNS))
     
-    return loss , acc , F1 , PRC , SNS
+    return loss , acc , F1 , PRC , SNS , logits_out , labels_out
 
             
-def confusion_matrix(g , h , subjects_list , device , model , targets , mlb) : 
-    model.eval()
-    logits = model(g , h , subjects_list , device)
+def confusion_matrix(true , predicted , mlb) : 
 
-    _, predicted = torch.max(logits, 1)
+    cm = sk.metrics.confusion_matrix(true.argmax(1), predicted.argmax(1))
 
-    true = mlb.transform(targets.values.reshape(-1,1)).argmax(1)
-
-    cm = sk.metrics.confusion_matrix(true, predicted.cpu().detach().numpy())
-
-    display_labels= list(targets.astype("category").cat.categories)
+    display_labels= list(np.unique(mlb.inverse_transform(true)))
     cmat = sns.heatmap(cm , annot = True , fmt = 'd' , cmap = 'Blues' , xticklabels=display_labels , yticklabels=display_labels , cbar = False)
     
     return cmat
 
-def AUROC(g , h , subjects_list , device , model , targets , mlb) : 
-    model.eval()
+def AUROC(y_score , logits , mlb) : 
 
-    logits = model(g , h , subjects_list , device)
-
-    n_classes = len(targets.unique())
-    y_score = mlb.transform(targets.values.reshape(-1,1))
-
-    Y_test = nn.functional.softmax(logits , dim = 1).cpu().detach().numpy()
+    Y_test = np.exp(logits)/np.sum(np.exp(logits) , axis = 1).reshape(-1,1)
+    targets = mlb.inverse_transform(y_score)
 
     # For each class
     precision = dict()
     recall = dict()
     average_precision = dict()
     average_recall = dict()
+    n_classes = len(np.unique(targets))
     for i in range(n_classes):
         precision[i], recall[i], _ = precision_recall_curve(y_score[:, i], Y_test[:, i])
         average_precision[i] = average_precision_score(y_score[:, i], Y_test[:, i])
@@ -151,7 +155,7 @@ def AUROC(g , h , subjects_list , device , model , targets , mlb) :
             precision=precision[i],
             average_precision=average_precision[i],
         )
-        display.plot(ax=ax, name=f"Precision-recall for class {targets.unique()[i]}", color=color)
+        display.plot(ax=ax, name=f"Precision-recall for class {np.unique(targets)[i]}", color=color)
 
     # add the legend for the iso-f1 curves
     handles, plt_labels = display.ax_.get_legend_handles_labels()
@@ -163,4 +167,4 @@ def AUROC(g , h , subjects_list , device , model , targets , mlb) :
     ax.legend(handles=handles, labels=plt_labels, loc="lower left")
     ax.set_title("Multi-class Precision-Recall curve")
     
-    return fig , Y_test
+    return fig 
