@@ -5,9 +5,10 @@ source('~/Year2/MOGDx/R/preprocess_functions.R')
 
 setwd('~/Year2/MOGDx/')
 
-dataset <- 'TCGA'
+dataset <- 'PPMI'
+project <- 'All'
 trait <- c('CONCOHORT_DEFINITION')
-TimeStep <- 'V06'
+TimeStep <- 'V08'
 index_col <- 'PATNO'
 
 # The list of modalities
@@ -34,7 +35,7 @@ for (sub_mod_list in mod_list) {
   datMeta <- t(data.frame( row.names = colnames))
   for (mod in sub_mod_list) {
     print(mod)
-    datMeta <- rbind(datMeta , read.csv(paste0('./data/',project,'/raw/Com_Tmpt/V08/output/',TimeStep,'/datMeta_',mod,'.csv') , row.names = 1)[ , colnames])
+    datMeta <- rbind(datMeta , read.csv(paste0('./data/',dataset,'/raw/',project,'/',TimeStep,'/output/',TimeStep,'/datMeta_',mod,'.csv') , row.names = 1)[ , colnames])
   }
   datMeta <- datMeta[!(duplicated(datMeta)),]
   rownames(datMeta) <- datMeta[[index_col]]
@@ -42,7 +43,7 @@ for (sub_mod_list in mod_list) {
   
   all_idx <- c()
   g_list <- list()
-  for (net in list.files('./Network/SNF/')) {
+  for (net in list.files('./Network/')) {
     if ((unlist(strsplit(net , '_'))[2] %in% sub_mod_list)&&(unlist(strsplit(net , '_'))[1] == TimeStep)) {
       print(net)
       net_graph <- read.csv(paste0('./Network/SNF/',net) , row.names = 1)
@@ -83,6 +84,6 @@ for (sub_mod_list in mod_list) {
   g <- snf.to.graph(W , datMeta , trait , all_idx , sub_mod_list)
   
   print(length(V(g)))
-  write.csv(as_long_data_frame(g) , file = paste0('./data/',project,'/raw/Com_Tmpt/V08/output/',TimeStep,'/',TimeStep,'_',paste0(sub_mod_list , collapse = '_'),'_graph.csv'))
+  write.csv(as_long_data_frame(g) , file = paste0('./data/',project,'/raw/',project,'/',TimeStep,'/output/',TimeStep,'/',TimeStep,'_',paste0(sub_mod_list , collapse = '_'),'_graph.csv'))
 }
 
