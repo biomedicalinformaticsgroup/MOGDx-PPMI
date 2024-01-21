@@ -74,14 +74,16 @@ Run the R script `SNF.R`
 
 
 ### Step 5 - Execute MOGDx.py
-Ensure all expression, meta and graph files for all modalities are in a single folder with naming convention 'modality_datExpr.csv'/'modality_datMeta.csv'/'modality_graph.csv' e.g. 'mRNA_datExpr.csv'/'mRNA_datMeta.csv'/'modality_graph.csv'. \
+Ensure all expression, meta and graph files for all modalities are in a single folder with naming convention \
+'modality_datExpr.csv'/'modality_datMeta.csv'/'modality_graph.csv' e.g. 'mRNA_datExpr.csv'/'mRNA_datMeta.csv'/'modality_graph.csv'. \
+
 If performing an analysis on integrated modalities ensure all expression and meta files for the integrated modalities are in the folder. \
 e.g. if analysing mRNA & miRNA, ensure mRNA_miRNA_graph.csv , datMeta_mRNA.csv, datMeta_miRNA.csv, datExpr_mRNA.csv and datExper_miRNA.csv are in the same folder. \
 
 This process will have been done automatically by the creation of the raw folder and running of SNF.R and it is easiest to retain this folder.
 
 MOGDx is a command line tool. A sample command is : \
-`python MOGDx.py -i "/raw/" -o "./Output/PPMI/All"  -snf "mRNA_miRNA_graph.csv" --n-splits 5 -ld 32 16 --target "paper_BRCA_Subtype_PAM50" --index-col "patient" --epochs 2000 --lr 0.001 --h-feats 64 --decoder-dim 64`
+`python MOGDx.py -i "/raw/" -o "./Output/PPMI/All"  -snf "mRNA_miRNA_graph.csv" --n-splits 5 -ld 32 16 --target "CONCOHORT_DEFINITION" --index-col "PATNO" --epochs 2000 --lr 0.001 --h-feats 64 --decoder-dim 64`
 
 -i is the location of the raw data containing all datExpr, datMeta and graph.csv files \
 -o is the location where the output will be printed \
