@@ -22,6 +22,11 @@ Steps 1-4 are executed in R, while step 5 is designed to run on a cluster with a
 ### Step 1 - Data Download
 Create a folder called `data` and download data from the [PPMI website](https://www.ppmi-info.org/access-data-specimens/download-data).
 
+Access to the PPMI data will have to be obtained individually through the PPMI website. 
+
+__* NOTE : The pre-processing steps laid out below require a working knowledge of R. The experiments run are at the discretion of the user and the pre-processing steps contained in this repository
+are a guideline. For a more comprehensive introduciton and procedure for the use of MOGDx please refer to [![DOI](https://zenodo.org/badge/622972427.svg)](https://zenodo.org/doi/10.5281/zenodo.10545043)*__
+
 ### Step 2 - Preprocessing
 Create a folder called for the dataset e.g. PPMI, and within this folder create a folder for each project.
 
@@ -53,7 +58,7 @@ Point the SNF script to the new Network folder
 
 Run the R script `SNF.R` 
 
-### Example of directory structure for TCGA
+### Example of directory structure for PPMI
 - data
   - PPMI-All
      - mRNA
